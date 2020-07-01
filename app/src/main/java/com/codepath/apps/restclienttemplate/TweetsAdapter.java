@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -63,6 +64,7 @@ public class TweetsAdapter extends RecyclerView.Adapter<TweetsAdapter.ViewHolder
     public class ViewHolder extends RecyclerView.ViewHolder {
 
         ImageView ivProfileImage;
+        ImageView ivMedia;
         TextView tvBody;
         TextView tvScreenName;
         TextView tvTimeAgo;
@@ -74,6 +76,7 @@ public class TweetsAdapter extends RecyclerView.Adapter<TweetsAdapter.ViewHolder
             tvBody = itemView.findViewById(R.id.tvBody);
             tvScreenName = itemView.findViewById(R.id.tvScreenName);
             tvTimeAgo = itemView.findViewById(R.id.tvTimeAgo);
+            ivMedia = itemView.findViewById(R.id.ivMedia);
         }
 
         public void bind(Tweet tweet) {
@@ -81,6 +84,21 @@ public class TweetsAdapter extends RecyclerView.Adapter<TweetsAdapter.ViewHolder
             tvScreenName.setText(tweet.user.screenName);
             tvTimeAgo.setText(tweet.timeAgo);
             Glide.with(context).load(tweet.user.profileImageUrl).into(ivProfileImage);
+            // Check if there was attached media
+            if (tweet.media) {
+                Glide.with(context).load(tweet.url).into(ivMedia);
+                // Make sure body doesn't write over the image ivMedia
+                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams)tvBody.getLayoutParams();
+                params.setMargins(5, 2, 0, 0); //substitute parameters for left, top, right, bottom
+                tvBody.setLayoutParams(params);
+            } else {
+                // Make sure no image is loaded in
+                Glide.with(context).clear(ivMedia);
+                // Adjust params to stretch out body
+                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams)tvBody.getLayoutParams();
+                params.setMargins(5, 2, -50, 0); //substitute parameters for left, top, right, bottom
+                tvBody.setLayoutParams(params);
+            }
         }
     }
 }
