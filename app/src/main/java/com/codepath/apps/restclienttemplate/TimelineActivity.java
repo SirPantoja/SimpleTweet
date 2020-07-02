@@ -39,6 +39,9 @@ public class TimelineActivity extends AppCompatActivity {
     List<Tweet> tweets;
     TweetsAdapter adapter;
     SwipeRefreshLayout swipeContainer;
+    // Instance of the progress action-view
+    MenuItem miActionProgressItem;
+    EndlessRecyclerViewScrollListener scrollListener;
 
     @SuppressLint("ResourceAsColor")
     @Override
@@ -65,12 +68,48 @@ public class TimelineActivity extends AppCompatActivity {
         adapter = new TweetsAdapter(this, tweets);
 
         // Recycler view setup: layout manager and adapter
-        rvTweets.setLayoutManager(new LinearLayoutManager(this));
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        rvTweets.setLayoutManager(layoutManager);
         rvTweets.setAdapter(adapter);
+        scrollListener = new EndlessRecyclerViewScrollListener(layoutManager) {
+            @Override
+            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
+                Log.i(TAG, "onLoadMore: " + page);
+                loadMoreData();
+            }
+
+            private void loadMoreData() {
+                //  --> Send the request including an offset value (i.e `page`) as a query parameter.
+                client.getNextPageOfTweets(new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Headers headers, JSON json) {
+                        Log.i(TAG, "onSuccess for loadMoreData");
+                        //  --> Deserialize and construct new model objects from the API response
+                        JSONArray jsonArray = json.jsonArray;
+                        try {
+                            //  --> Append the new data objects to the existing set of items inside the array of items
+                            //  --> Notify the adapter of the new items made with `notifyItemRangeInserted()`
+                            List<Tweet> tweets = Tweet.fromJsonArray(jsonArray);
+                            adapter.addAll(tweets);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Headers headers, String response, Throwable throwable) {
+                        Log.e(TAG, "onFailure for loadMoreData", throwable);
+                    }
+                }, tweets.get(tweets.size() - 1).id);
+            }
+        };
+        // Add scroll listener
+        rvTweets.addOnScrollListener(scrollListener);
         populateHomeTimeline();
     }
 
     private void populateHomeTimeline() {
+        showProgressBar();
         client.getHomeTimeline(new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Headers headers, JSON json) {
@@ -85,6 +124,7 @@ public class TimelineActivity extends AppCompatActivity {
                     Log.e(TAG, "Json exception", e);
                     e.printStackTrace();
                 }
+                hideProgressBar();
             }
 
             @Override
@@ -145,5 +185,28 @@ public class TimelineActivity extends AppCompatActivity {
         }
 
         return relativeDate;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // Store instance of the menu item containing progress
+        miActionProgressItem = menu.findItem(R.id.miActionProgress);
+
+        // Return to finish
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    public void showProgressBar() {
+        // Show progress item
+        if (miActionProgressItem != null) {
+            miActionProgressItem.setVisible(true);
+        }
+    }
+
+    public void hideProgressBar() {
+        // Hide progress item
+        if (miActionProgressItem != null) {
+            miActionProgressItem.setVisible(false);
+        }
     }
 }

@@ -42,6 +42,12 @@ public class ComposeActivity extends AppCompatActivity {
         btnTweet = findViewById(R.id.btnTweet);
         tvCharCount = findViewById(R.id.tvCharCount);
 
+        // If there is an intent here, that means we are replying so insert the handle into the textbox
+        Intent intent = getIntent();
+        if (intent.getStringExtra("handle") != null) {
+            etCompose.setText(intent.getStringExtra("handle"));
+        }
+
         // Set on text change listener. Citation: https://stackoverflow.com/questions/3013791/live-character-count-for-edittext
         final TextWatcher mTextEditorWatcher = new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
